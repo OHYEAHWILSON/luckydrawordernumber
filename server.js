@@ -12,10 +12,10 @@ import { fileURLToPath } from 'url'; // Import the 'url' module to handle the fi
 const __filename = fileURLToPath(import.meta.url); // Get the current file path
 const __dirname = path.dirname(__filename); // Get the directory name of the current file
 
-// Read the service account JSON file using fs.readFileSync from the environment variable path
-const serviceAccountPath = path.join(__dirname, process.env.FIREBASE_SERVICE_ACCOUNT_PATH);
-const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf8')); // Read and parse the JSON file
+// Get the Firebase service account JSON from the environment variable
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY); // Parse the JSON directly from the environment variable
 
+// Initialize Firebase Admin SDK
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
 });
