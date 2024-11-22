@@ -5,16 +5,19 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import { readFileSync } from 'fs';
 
-// Load environment variables first
+// Load environment variables at the very beginning
 dotenv.config(); 
 
-// Firebase Admin initialization logic
+// Check for the FIREBASE_SERVICE_ACCOUNT_KEY environment variable
 const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
 if (!serviceAccountBase64) {
   console.error('Firebase service account key not found in environment variables.');
   process.exit(1); // Exit if the environment variable is not set
 }
+
+// Middleware to enable CORS
+app.use(cors());
 
 // Decode the Base64 string and parse the JSON
 const serviceAccountJson = JSON.parse(Buffer.from(serviceAccountBase64, 'base64').toString('utf-8'));
@@ -27,9 +30,11 @@ const db = admin.firestore();
 
 const app = express(); 
 
+// Middleware to handle JSON requests
 app.use(express.json());
 app.use(cors());
 
+// Test route for Firestore connection
 app.get('/test-firestore', async (req, res) => {
   try {
     const docRef = db.collection('testCollection').doc('testDoc');
@@ -45,11 +50,7 @@ app.get('/test-firestore', async (req, res) => {
   }
 });
 
-// Make sure this line comes after the declaration of PORT
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
-
+// Route to add order numbers to Firestore
 app.post('/add-order-number', async (req, res) => {
   try {
     const { orderNumber } = req.body;
@@ -68,6 +69,11 @@ app.post('/add-order-number', async (req, res) => {
     console.error('Error adding order number:', error);
     res.status(500).json({ success: false, error: error.message });
   }
+});
+
+// Assuming PORT is already set elsewhere, we don't declare it here again
+app.listen(process.env.PORT || 5015, () => {
+  console.log(`Server is running on port ${process.env.PORT || 5015}`);
 });
 
 // Step 1: Sales rep inputs order number
