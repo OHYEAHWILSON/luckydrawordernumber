@@ -1,0 +1,7 @@
+PORT=5015
+FIREBASE_API_KEY=AIzaSyDbQA6iMVdESSvDjDwx6j7RHDs8ixFAe_E
+FIREBASE_AUTH_DOMAIN=lucky-draw---order-number.firebaseapp.com
+FIREBASE_PROJECT_ID=lucky-draw---order-number
+FIREBASE_STORAGE_BUCKET=lucky-draw---order-number.firebasestorage.app
+FIREBASE_MESSAGING_SENDER_ID=457856687001
+FIREBASE_APP_ID=1:457856687001:web:16cdc85e11bf4f3b869108

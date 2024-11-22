@@ -1,0 +1,15 @@
+{
+  "name": "lucky-draw-order-number",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "firebase-admin": "^11.0.0",
+    "node-fetch": "^3.2.0",
+    "dotenv": "^16.0.0",
+    "cors": "^2.8.5"
+  }
+}
