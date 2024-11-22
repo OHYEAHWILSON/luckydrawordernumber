@@ -30,7 +30,17 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Test route for Firestore connection
+// Simple authentication middleware for sales rep
+const verifySalesRep = (req, res, next) => {
+  // Check for a header that identifies the user as a sales rep
+  const role = req.headers['x-role'];
+  if (role !== 'sales') {
+    return res.status(403).json({ success: false, message: 'Unauthorized. Sales rep access required.' });
+  }
+  next();
+};
+
+// Route for testing Firestore connection
 app.get('/test-firestore', async (req, res) => {
   try {
     const docRef = db.collection('testCollection').doc('testDoc');
@@ -42,6 +52,31 @@ app.get('/test-firestore', async (req, res) => {
     res.json({ success: true, message: 'Firestore is connected!' });
   } catch (error) {
     console.error('Error testing Firestore:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Step 1: Sales rep can add a new order number (only accessible by sales reps)
+app.post('/add-order-number', verifySalesRep, async (req, res) => {
+  try {
+    const { orderNumber } = req.body;
+    if (!orderNumber) {
+      return res.status(400).json({ success: false, error: 'Order number is required.' });
+    }
+
+    const docRef = db.collection('orderNumbers').doc(orderNumber);
+    const docSnapshot = await docRef.get();
+
+    if (docSnapshot.exists) {
+      return res.status(400).json({ success: false, message: 'Order number already exists.' });
+    }
+
+    // Add the new order number with a `hasPlayed` status of false
+    await docRef.set({ hasPlayed: false });
+
+    res.status(200).json({ success: true, message: 'Order number added successfully.' });
+  } catch (error) {
+    console.error('Error adding order number:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -73,7 +108,7 @@ app.post('/check-order-number', async (req, res) => {
   }
 });
 
-// Step 4: Record draw result and update the order number's status to 'hasPlayed'
+// Step 3: Record draw result and update the order number's status to 'hasPlayed'
 app.post('/record-draw-result', async (req, res) => {
   try {
     const { orderNumber, drawResult } = req.body;
