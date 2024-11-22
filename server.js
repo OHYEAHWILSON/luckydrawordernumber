@@ -5,9 +5,10 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import { readFileSync } from 'fs';
 
-dotenv.config(); // Load environment variables
+// Load environment variables first
+dotenv.config(); 
 
-// Initialize Firebase Admin with Firestore
+// Firebase Admin initialization logic
 const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
 if (!serviceAccountBase64) {
@@ -22,18 +23,18 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccountJson),
 });
 
-const db = admin.firestore(); // Firestore database instance
+const db = admin.firestore(); 
 
-const app = express(); // Create an Express app
+const app = express(); 
 
-// Middleware to handle JSON requests
+// Declare the PORT variable early in the script
+const PORT = process.env.PORT || 5015;
+
 app.use(express.json());
-app.use(cors()); // Use CORS to allow cross-origin requests
+app.use(cors());
 
-// Route to test Firestore connection
 app.get('/test-firestore', async (req, res) => {
   try {
-    // Add a test document to Firestore
     const docRef = db.collection('testCollection').doc('testDoc');
     await docRef.set({
       message: 'Hello from Firestore!',
@@ -47,12 +48,11 @@ app.get('/test-firestore', async (req, res) => {
   }
 });
 
-// Set up the port for the server to listen on
+// Make sure this line comes after the declaration of PORT
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
 
-// Route to handle adding order numbers to Firestore
 app.post('/add-order-number', async (req, res) => {
   try {
     const { orderNumber } = req.body;
@@ -60,7 +60,6 @@ app.post('/add-order-number', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Order number is required.' });
     }
 
-    // Add the order number to Firestore
     const docRef = db.collection('orderNumbers').doc(orderNumber);
     await docRef.set({
       orderNumber,
