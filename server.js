@@ -93,12 +93,12 @@ app.post('/check-order-number', async (req, res) => {
     const docSnapshot = await docRef.get();
 
     if (!docSnapshot.exists) {
-      return res.status(404).json({ success: false, message: 'Order number does not exist. Please contact your sales representative.' });
+      return res.status(404).json({ success: false, message: 'Please input a qualified order number. Contact your sales representative for more information.' });
     }
 
     const orderData = docSnapshot.data();
     if (orderData.hasPlayed) {
-      return res.status(400).json({ success: false, message: 'This order number has already been used.' });
+      return res.status(400).json({ success: false, message: 'You have used your chance.' });
     }
 
     return res.json({ success: true, message: 'Order number is valid. Proceed with the draw.' });
