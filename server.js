@@ -85,10 +85,19 @@ app.post('/check-order-number', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Order number is required.' });
     }
 
+    // Validate order number format (optional: you can adjust this regex as per your needs)
+    const orderNumberPattern = /^[a-zA-Z0-9\-]+$/;  // Example: alphanumeric with hyphen
+    if (!orderNumberPattern.test(orderNumber)) {
+      return res.status(400).json({ success: false, error: 'Invalid order number format.' });
+    }
+
     const docRef = db.collection('orderNumbers').doc(orderNumber);
     const docSnapshot = await docRef.get();
 
     if (docSnapshot.exists) {
+      // Mark the order number as used (set "hasPlayed" to true)
+      await docRef.update({ hasPlayed: true });
+
       return res.status(400).json({ success: false, message: 'This order number has already been used.' });
     } else {
       return res.json({ success: true, message: 'Order number is valid. Proceed with the draw.' });
@@ -113,6 +122,10 @@ app.post('/record-draw-result', async (req, res) => {
       drawResult,
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
     });
+
+    // Mark the order number as "used" after recording the draw result
+    const orderRef = db.collection('orderNumbers').doc(orderNumber);
+    await orderRef.update({ hasPlayed: true });
 
     res.json({ success: true, message: 'Draw result recorded successfully.' });
   } catch (error) {
