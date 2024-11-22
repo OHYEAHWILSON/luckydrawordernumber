@@ -16,9 +16,6 @@ if (!serviceAccountBase64) {
   process.exit(1); // Exit if the environment variable is not set
 }
 
-// Middleware to enable CORS
-app.use(cors());
-
 // Decode the Base64 string and parse the JSON
 const serviceAccountJson = JSON.parse(Buffer.from(serviceAccountBase64, 'base64').toString('utf-8'));
 
