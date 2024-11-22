@@ -113,19 +113,19 @@ app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
 
-// Fetch draw results
-app.get('/get-draw-results', async (req, res) => {
+// Fetch order numbers
+app.get('/get-order-numbers', async (req, res) => {
   try {
-    const querySnapshot = await db.collection('drawResults').get();
+    const querySnapshot = await db.collection('orderNumbers').get();
     const results = [];
-    
+
     querySnapshot.forEach(doc => {
       results.push(doc.data()); // Push each document's data to the results array
     });
 
     res.json({ success: true, data: results });
   } catch (error) {
-    console.error('Error fetching draw results:', error);
+    console.error('Error fetching order numbers:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
