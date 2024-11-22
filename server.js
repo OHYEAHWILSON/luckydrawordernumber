@@ -54,14 +54,18 @@ app.post('/check-order-number', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Order number is required.' });
     }
 
-    const docRef = db.collection('orderNumbers').doc(orderNumber);
-    const docSnapshot = await docRef.get();
+    // Query Firestore using 'orderNumber' as a field
+    const querySnapshot = await db.collection('orderNumbers').where('orderNumber', '==', orderNumber).get();
 
-    if (!docSnapshot.exists) {
+    // Check if the order number exists in Firestore
+    if (querySnapshot.empty) {
       return res.status(404).json({ success: false, message: 'Order number does not exist. Please contact your sales representative.' });
     }
 
+    // Retrieve the first matching document
+    const docSnapshot = querySnapshot.docs[0];
     const orderData = docSnapshot.data();
+
     if (orderData.hasPlayed) {
       return res.status(400).json({ success: false, message: 'This order number has already been used.' });
     }
