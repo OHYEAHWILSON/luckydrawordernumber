@@ -56,7 +56,7 @@ app.get('/test-firestore', async (req, res) => {
   }
 });
 
-// Add Order Number (for Sales Rep)
+// Add Order Number (for Sales Rep only)
 app.post('/add-order-number', async (req, res) => {
   try {
     const { orderNumber } = req.body;
@@ -68,9 +68,8 @@ app.post('/add-order-number', async (req, res) => {
     const docRef = db.collection('orderNumbers').doc(orderNumber);
     const docSnapshot = await docRef.get();
 
-    // Check if the order number already exists
+    // If the order number already exists, send the response for the sales rep
     if (docSnapshot.exists) {
-      // If it exists, send the response for the sales rep
       return res.status(200).json({ success: false, message: 'Order number already exists.' });
     }
 
