@@ -27,9 +27,6 @@ const db = admin.firestore();
 
 const app = express(); 
 
-// Declare the PORT variable early in the script
-const PORT = process.env.PORT || 5015;
-
 app.use(express.json());
 app.use(cors());
 
