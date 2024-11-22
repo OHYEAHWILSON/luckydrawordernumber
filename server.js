@@ -2,8 +2,9 @@ import express from 'express';
 import admin from 'firebase-admin';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import { readFileSync } from 'fs';
 
-// Load environment variables
+// Load environment variables at the very beginning
 dotenv.config();
 
 // Check for the FIREBASE_SERVICE_ACCOUNT_KEY environment variable
@@ -46,7 +47,28 @@ app.get('/test-firestore', async (req, res) => {
   }
 });
 
-// Step 2: Customer checks if order number exists and if it has been used
+// Route to add order numbers to Firestore
+app.post('/add-order-number', async (req, res) => {
+  try {
+    const { orderNumber } = req.body;
+    if (!orderNumber) {
+      return res.status(400).json({ success: false, error: 'Order number is required.' });
+    }
+
+    const docRef = db.collection('orderNumbers').doc(orderNumber);
+    await docRef.set({
+      orderNumber,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    res.json({ success: true, message: 'Order number added successfully.' });
+  } catch (error) {
+    console.error('Error adding order number:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Step 2: Customer checks if order number is used
 app.post('/check-order-number', async (req, res) => {
   try {
     const { orderNumber } = req.body;
@@ -54,30 +76,21 @@ app.post('/check-order-number', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Order number is required.' });
     }
 
-    // Query Firestore using 'orderNumber' as a field
-    const querySnapshot = await db.collection('orderNumbers').where('orderNumber', '==', orderNumber).get();
+    const docRef = db.collection('orderNumbers').doc(orderNumber);
+    const docSnapshot = await docRef.get();
 
-    // Check if the order number exists in Firestore
-    if (querySnapshot.empty) {
-      return res.status(404).json({ success: false, message: 'Order number does not exist. Please contact your sales representative.' });
-    }
-
-    // Retrieve the first matching document
-    const docSnapshot = querySnapshot.docs[0];
-    const orderData = docSnapshot.data();
-
-    if (orderData.hasPlayed) {
+    if (docSnapshot.exists) {
       return res.status(400).json({ success: false, message: 'This order number has already been used.' });
+    } else {
+      return res.json({ success: true, message: 'Order number is valid. Proceed with the draw.' });
     }
-
-    return res.json({ success: true, message: 'Order number is valid. Proceed with the draw.' });
   } catch (error) {
     console.error('Error checking order number:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Step 4: Record draw result and update the order number's status to 'hasPlayed'
+// Step 4: Record draw result
 app.post('/record-draw-result', async (req, res) => {
   try {
     const { orderNumber, drawResult } = req.body;
@@ -85,22 +98,10 @@ app.post('/record-draw-result', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Order number and draw result are required.' });
     }
 
-    const docRef = db.collection('orderNumbers').doc(orderNumber);
-    const docSnapshot = await docRef.get();
-
-    if (!docSnapshot.exists) {
-      return res.status(404).json({ success: false, message: 'Order number does not exist.' });
-    }
-
-    const orderData = docSnapshot.data();
-    if (orderData.hasPlayed) {
-      return res.status(400).json({ success: false, message: 'You have already used your chance.' });
-    }
-
-    // Update the order's status and record the draw result
-    await docRef.update({
-      hasPlayed: true,
-      drawResult: drawResult,
+    const docRef = db.collection('drawResults').doc(orderNumber);
+    await docRef.set({
+      orderNumber,
+      drawResult,
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
     });
 
