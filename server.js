@@ -1,4 +1,4 @@
- import express from 'express';
+import express from 'express';
 import admin from 'firebase-admin';
 import dotenv from 'dotenv';
 import cors from 'cors';
