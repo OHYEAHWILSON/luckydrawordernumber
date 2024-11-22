@@ -47,7 +47,7 @@ app.get('/test-firestore', async (req, res) => {
   }
 });
 
-// Route to add order numbers to Firestore
+// Route to add order numbers to Firestore with "hasPlayed" status
 app.post('/add-order-number', async (req, res) => {
   try {
     const { orderNumber } = req.body;
@@ -55,13 +55,22 @@ app.post('/add-order-number', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Order number is required.' });
     }
 
+    // Check if order number already exists in the database
     const docRef = db.collection('orderNumbers').doc(orderNumber);
-    await docRef.set({
-      orderNumber,
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    const docSnapshot = await docRef.get();
 
-    res.json({ success: true, message: 'Order number added successfully.' });
+    if (docSnapshot.exists) {
+      return res.status(400).json({ success: false, message: 'This order number has already been used.' });
+    } else {
+      // Add the order number with "hasPlayed" status as false
+      await docRef.set({
+        orderNumber,
+        hasPlayed: false,  // Mark as not played initially
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      res.json({ success: true, message: 'Order number added successfully with "hasPlayed" status set to false.' });
+    }
   } catch (error) {
     console.error('Error adding order number:', error);
     res.status(500).json({ success: false, error: error.message });
