@@ -2,9 +2,8 @@ import express from 'express';
 import admin from 'firebase-admin';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import { readFileSync } from 'fs';
 
-// Load environment variables at the very beginning
+// Load environment variables
 dotenv.config();
 
 // Check for the FIREBASE_SERVICE_ACCOUNT_KEY environment variable
@@ -47,37 +46,7 @@ app.get('/test-firestore', async (req, res) => {
   }
 });
 
-// Route to add order numbers to Firestore with "hasPlayed" status
-app.post('/add-order-number', async (req, res) => {
-  try {
-    const { orderNumber } = req.body;
-    if (!orderNumber) {
-      return res.status(400).json({ success: false, error: 'Order number is required.' });
-    }
-
-    // Check if order number already exists in the database
-    const docRef = db.collection('orderNumbers').doc(orderNumber);
-    const docSnapshot = await docRef.get();
-
-    if (docSnapshot.exists) {
-      return res.status(400).json({ success: false, message: 'This order number has already been used.' });
-    } else {
-      // Add the order number with "hasPlayed" status as false
-      await docRef.set({
-        orderNumber,
-        hasPlayed: false,  // Mark as not played initially
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      });
-
-      res.json({ success: true, message: 'Order number added successfully with "hasPlayed" status set to false.' });
-    }
-  } catch (error) {
-    console.error('Error adding order number:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Step 2: Customer checks if order number is used
+// Step 2: Customer checks if order number exists and if it has been used
 app.post('/check-order-number', async (req, res) => {
   try {
     const { orderNumber } = req.body;
@@ -88,18 +57,23 @@ app.post('/check-order-number', async (req, res) => {
     const docRef = db.collection('orderNumbers').doc(orderNumber);
     const docSnapshot = await docRef.get();
 
-    if (docSnapshot.exists) {
-      return res.status(400).json({ success: false, message: 'This order number has already been used.' });
-    } else {
-      return res.json({ success: true, message: 'Order number is valid. Proceed with the draw.' });
+    if (!docSnapshot.exists) {
+      return res.status(404).json({ success: false, message: 'Order number does not exist. Please contact your sales representative.' });
     }
+
+    const orderData = docSnapshot.data();
+    if (orderData.hasPlayed) {
+      return res.status(400).json({ success: false, message: 'This order number has already been used.' });
+    }
+
+    return res.json({ success: true, message: 'Order number is valid. Proceed with the draw.' });
   } catch (error) {
     console.error('Error checking order number:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Step 4: Record draw result
+// Step 4: Record draw result and update the order number's status to 'hasPlayed'
 app.post('/record-draw-result', async (req, res) => {
   try {
     const { orderNumber, drawResult } = req.body;
@@ -107,10 +81,22 @@ app.post('/record-draw-result', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Order number and draw result are required.' });
     }
 
-    const docRef = db.collection('drawResults').doc(orderNumber);
-    await docRef.set({
-      orderNumber,
-      drawResult,
+    const docRef = db.collection('orderNumbers').doc(orderNumber);
+    const docSnapshot = await docRef.get();
+
+    if (!docSnapshot.exists) {
+      return res.status(404).json({ success: false, message: 'Order number does not exist.' });
+    }
+
+    const orderData = docSnapshot.data();
+    if (orderData.hasPlayed) {
+      return res.status(400).json({ success: false, message: 'You have already used your chance.' });
+    }
+
+    // Update the order's status and record the draw result
+    await docRef.update({
+      hasPlayed: true,
+      drawResult: drawResult,
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
     });
 
