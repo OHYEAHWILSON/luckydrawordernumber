@@ -50,3 +50,26 @@ const PORT = process.env.PORT || 5015;
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
+
+// Route to handle adding order numbers to Firestore
+app.post('/add-order-number', async (req, res) => {
+    try {
+        const { orderNumber } = req.body;
+        if (!orderNumber) {
+            return res.status(400).json({ success: false, error: 'Order number is required.' });
+        }
+
+        // Add the order number to Firestore
+        const docRef = db.collection('orderNumbers').doc(orderNumber);
+        await docRef.set({
+            orderNumber,
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        res.json({ success: true, message: 'Order number added successfully.' });
+    } catch (error) {
+        console.error('Error adding order number:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
