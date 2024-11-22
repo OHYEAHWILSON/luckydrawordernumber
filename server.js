@@ -38,7 +38,10 @@ app.post('/submit-order-number', async (req, res) => {
         }
 
         // Save the order number to Firestore as "unused"
-        await orderRef.set({ used: false });
+        await orderRef.set({
+            orderNumber: orderNumber, // Explicitly save the order number
+            used: false
+        });
 
         res.json({ success: true, message: 'Order number saved successfully' });
     } catch (error) {
@@ -76,9 +79,19 @@ app.post('/play-lucky-draw', async (req, res) => {
         const result = results[Math.floor(Math.random() * results.length)];
 
         // Step 4: Mark order as used and record the draw result
-        await orderRef.update({ used: true, drawResult: result, timestamp: admin.firestore.FieldValue.serverTimestamp() });
+        await orderRef.update({
+            used: true,
+            drawResult: result,
+            timestamp: admin.firestore.FieldValue.serverTimestamp()
+        });
 
-        res.json({ success: true, message: 'Lucky draw completed', drawResult: result });
+        // Send response back with the order number and draw result
+        res.json({
+            success: true,
+            message: 'Lucky draw completed',
+            orderNumber: orderNumber, // Include the order number in the response
+            drawResult: result
+        });
     } catch (error) {
         console.error('Error processing lucky draw:', error);
         res.status(500).json({ success: false, message: 'Internal server error' });
