@@ -1,4 +1,4 @@
-import express from 'express';
+ import express from 'express';
 import admin from 'firebase-admin';
 import dotenv from 'dotenv';
 import cors from 'cors';
@@ -30,17 +30,7 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Simple authentication middleware for sales rep
-const verifySalesRep = (req, res, next) => {
-  // Check for a header that identifies the user as a sales rep
-  const role = req.headers['x-role'];
-  if (role !== 'sales') {
-    return res.status(403).json({ success: false, message: 'Unauthorized. Sales rep access required.' });
-  }
-  next();
-};
-
-// Route for testing Firestore connection
+// Test route for Firestore connection
 app.get('/test-firestore', async (req, res) => {
   try {
     const docRef = db.collection('testCollection').doc('testDoc');
@@ -52,33 +42,6 @@ app.get('/test-firestore', async (req, res) => {
     res.json({ success: true, message: 'Firestore is connected!' });
   } catch (error) {
     console.error('Error testing Firestore:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Add Order Number (for Sales Rep only)
-app.post('/add-order-number', async (req, res) => {
-  try {
-    const { orderNumber } = req.body;
-
-    if (!orderNumber) {
-      return res.status(400).json({ success: false, error: 'Order number is required.' });
-    }
-
-    const docRef = db.collection('orderNumbers').doc(orderNumber);
-    const docSnapshot = await docRef.get();
-
-    // If the order number already exists, send the response for the sales rep
-    if (docSnapshot.exists) {
-      return res.status(200).json({ success: false, message: 'Order number already exists.' });
-    }
-
-    // If the order number does not exist, record it in Firebase
-    await docRef.set({ hasPlayed: false });
-
-    res.status(200).json({ success: true, message: 'Order number successfully recorded.' });
-  } catch (error) {
-    console.error('Error adding order number:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -95,12 +58,12 @@ app.post('/check-order-number', async (req, res) => {
     const docSnapshot = await docRef.get();
 
     if (!docSnapshot.exists) {
-      return res.status(404).json({ success: false, message: 'Please input a qualified order number. Contact your sales representative for more information.' });
+      return res.status(404).json({ success: false, message: 'Order number does not exist. Please contact your sales representative.' });
     }
 
     const orderData = docSnapshot.data();
     if (orderData.hasPlayed) {
-      return res.status(400).json({ success: false, message: 'You have used your chance.' });
+      return res.status(400).json({ success: false, message: 'This order number has already been used.' });
     }
 
     return res.json({ success: true, message: 'Order number is valid. Proceed with the draw.' });
@@ -110,7 +73,7 @@ app.post('/check-order-number', async (req, res) => {
   }
 });
 
-// Step 3: Record draw result and update the order number's status to 'hasPlayed'
+// Step 4: Record draw result and update the order number's status to 'hasPlayed'
 app.post('/record-draw-result', async (req, res) => {
   try {
     const { orderNumber, drawResult } = req.body;
@@ -147,5 +110,22 @@ app.post('/record-draw-result', async (req, res) => {
 // Set up the port for the server to listen on
 const PORT = process.env.PORT || 5015;  // Ensure using dynamic port assignment
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(Server is running on port ${PORT});
+});
+
+// Fetch draw results
+app.get('/get-draw-results', async (req, res) => {
+  try {
+    const querySnapshot = await db.collection('drawResults').get();
+    const results = [];
+    
+    querySnapshot.forEach(doc => {
+      results.push(doc.data()); // Push each document's data to the results array
+    });
+
+    res.json({ success: true, data: results });
+  } catch (error) {
+    console.error('Error fetching draw results:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
