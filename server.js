@@ -56,10 +56,11 @@ app.get('/test-firestore', async (req, res) => {
   }
 });
 
-// Step 1: Sales rep can add a new order number (only accessible by sales reps)
-app.post('/add-order-number', verifySalesRep, async (req, res) => {
+// Add Order Number (for Sales Rep)
+app.post('/add-order-number', async (req, res) => {
   try {
     const { orderNumber } = req.body;
+
     if (!orderNumber) {
       return res.status(400).json({ success: false, error: 'Order number is required.' });
     }
@@ -67,14 +68,16 @@ app.post('/add-order-number', verifySalesRep, async (req, res) => {
     const docRef = db.collection('orderNumbers').doc(orderNumber);
     const docSnapshot = await docRef.get();
 
+    // Check if the order number already exists
     if (docSnapshot.exists) {
-      return res.status(400).json({ success: false, message: 'Order number already exists.' });
+      // If it exists, send the response for the sales rep
+      return res.status(200).json({ success: false, message: 'Order number already exists.' });
     }
 
-    // Add the new order number with a `hasPlayed` status of false
+    // If the order number does not exist, record it in Firebase
     await docRef.set({ hasPlayed: false });
 
-    res.status(200).json({ success: true, message: 'Order number added successfully.' });
+    res.status(200).json({ success: true, message: 'Order number successfully recorded.' });
   } catch (error) {
     console.error('Error adding order number:', error);
     res.status(500).json({ success: false, error: error.message });
