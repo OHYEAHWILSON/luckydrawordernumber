@@ -7,11 +7,6 @@ import { readFileSync } from 'fs'; // Import fs to read files
 
 dotenv.config(); // Load environment variables
 
-// Initialize Firebase Admin with Firestore
-import { fileURLToPath } from 'url'; // Import the 'url' module to handle the file path correctly
-const __filename = fileURLToPath(import.meta.url); // Get the current file path
-const __dirname = path.dirname(__filename); // Get the directory name of the current file
-
 // Get the Firebase service account JSON from the environment variable
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY); // Parse the JSON directly from the environment variable
 
