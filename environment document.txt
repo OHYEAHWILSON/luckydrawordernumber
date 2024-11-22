@@ -6,7 +6,6 @@ FIREBASE_STORAGE_BUCKET=lucky-draw---order-number.firebasestorage.app
 FIREBASE_MESSAGING_SENDER_ID=457856687001
 FIREBASE_APP_ID=1:457856687001:web:16cdc85e11bf4f3b869108
 
-FIREBASE_SERVICE_ACCOUNT_PATH=serviceAccountKey.json
-FIREBASE_SERVICE_ACCOUNT_PATH=C:\\Users\\wilso\\lucky-draw-project-new\\serviceAccountKey.json
+FIREBASE_SERVICE_ACCOUNT_PATH=C:\Users\wilso\lucky-draw-project-new\serviceAccountKey.json
 
 
