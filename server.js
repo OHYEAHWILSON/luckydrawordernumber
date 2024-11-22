@@ -23,6 +23,11 @@ app.post('/submit-order-number', async (req, res) => {
     try {
         const { orderNumber } = req.body; // Get the order number from the request body
 
+        // Validate input
+        if (!orderNumber) {
+            return res.status(400).json({ success: false, message: 'Order number is required' });
+        }
+
         // Check if order number already exists (this ensures it is only entered once)
         const orderRef = db.collection('orders').doc(orderNumber); // Reference to the order in Firestore
         const doc = await orderRef.get(); // Get the document
@@ -46,6 +51,11 @@ app.post('/submit-order-number', async (req, res) => {
 app.post('/play-lucky-draw', async (req, res) => {
     try {
         const { orderNumber } = req.body; // Get the order number from the request body
+
+        // Validate input
+        if (!orderNumber) {
+            return res.status(400).json({ success: false, message: 'Order number is required' });
+        }
 
         // Check if the order number exists in Firestore
         const orderRef = db.collection('orders').doc(orderNumber);
