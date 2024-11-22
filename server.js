@@ -1,12 +1,11 @@
 import express from 'express';
 import admin from 'firebase-admin';
-import path from 'path';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import { readFileSync } from 'fs';
 
 // Load environment variables at the very beginning
-dotenv.config(); 
+dotenv.config();
 
 // Check for the FIREBASE_SERVICE_ACCOUNT_KEY environment variable
 const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
@@ -19,13 +18,14 @@ if (!serviceAccountBase64) {
 // Decode the Base64 string and parse the JSON
 const serviceAccountJson = JSON.parse(Buffer.from(serviceAccountBase64, 'base64').toString('utf-8'));
 
+// Initialize Firebase Admin SDK
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccountJson),
 });
 
-const db = admin.firestore(); 
+const db = admin.firestore();
 
-const app = express(); 
+const app = express();
 
 // Middleware to handle JSON requests
 app.use(express.json());
@@ -68,76 +68,52 @@ app.post('/add-order-number', async (req, res) => {
   }
 });
 
-// Assuming PORT is already set elsewhere, we don't declare it here again
-app.listen(process.env.PORT || 5015, () => {
-  console.log(`Server is running on port ${process.env.PORT || 5015}`);
-});
-
-// Step 1: Sales rep inputs order number
-app.post('/add-order-number', async (req, res) => {
-    try {
-        const { orderNumber } = req.body;
-        if (!orderNumber) {
-            return res.status(400).json({ success: false, error: 'Order number is required.' });
-        }
-        const docRef = db.collection('orderNumbers').doc(orderNumber);
-        await docRef.set({
-            orderNumber,
-            timestamp: admin.firestore.FieldValue.serverTimestamp(),
-        });
-        res.json({ success: true, message: 'Order number added successfully.' });
-    } catch (error) {
-        console.error('Error adding order number:', error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
 // Step 2: Customer checks if order number is used
 app.post('/check-order-number', async (req, res) => {
-    try {
-        const { orderNumber } = req.body;
-        if (!orderNumber) {
-            return res.status(400).json({ success: false, error: 'Order number is required.' });
-        }
-
-        const docRef = db.collection('orderNumbers').doc(orderNumber);
-        const docSnapshot = await docRef.get();
-
-        if (docSnapshot.exists) {
-            return res.status(400).json({ success: false, message: 'This order number has already been used.' });
-        } else {
-            return res.json({ success: true, message: 'Order number is valid. Proceed with the draw.' });
-        }
-    } catch (error) {
-        console.error('Error checking order number:', error);
-        res.status(500).json({ success: false, error: error.message });
+  try {
+    const { orderNumber } = req.body;
+    if (!orderNumber) {
+      return res.status(400).json({ success: false, error: 'Order number is required.' });
     }
+
+    const docRef = db.collection('orderNumbers').doc(orderNumber);
+    const docSnapshot = await docRef.get();
+
+    if (docSnapshot.exists) {
+      return res.status(400).json({ success: false, message: 'This order number has already been used.' });
+    } else {
+      return res.json({ success: true, message: 'Order number is valid. Proceed with the draw.' });
+    }
+  } catch (error) {
+    console.error('Error checking order number:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 // Step 4: Record draw result
 app.post('/record-draw-result', async (req, res) => {
-    try {
-        const { orderNumber, drawResult } = req.body;
-        if (!orderNumber || !drawResult) {
-            return res.status(400).json({ success: false, error: 'Order number and draw result are required.' });
-        }
-
-        const docRef = db.collection('drawResults').doc(orderNumber);
-        await docRef.set({
-            orderNumber,
-            drawResult,
-            timestamp: admin.firestore.FieldValue.serverTimestamp(),
-        });
-
-        res.json({ success: true, message: 'Draw result recorded successfully.' });
-    } catch (error) {
-        console.error('Error recording draw result:', error);
-        res.status(500).json({ success: false, error: error.message });
+  try {
+    const { orderNumber, drawResult } = req.body;
+    if (!orderNumber || !drawResult) {
+      return res.status(400).json({ success: false, error: 'Order number and draw result are required.' });
     }
+
+    const docRef = db.collection('drawResults').doc(orderNumber);
+    await docRef.set({
+      orderNumber,
+      drawResult,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    res.json({ success: true, message: 'Draw result recorded successfully.' });
+  } catch (error) {
+    console.error('Error recording draw result:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 // Set up the port for the server to listen on
-const PORT = process.env.PORT || 5015;
+const PORT = process.env.PORT || 5015;  // Ensure using dynamic port assignment
 app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 });
