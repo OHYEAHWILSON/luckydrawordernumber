@@ -98,3 +98,10 @@ app.get('/export-order-numbers', async (req, res) => {
     res.status(500).send('Error exporting data to CSV.');
   }
 });
+
+// Wake-up ping route to prevent server from sleeping
+app.get('/keep-alive', (req, res) => {
+  console.log('Received a keep-alive ping');
+  res.send('Server is alive');
+});
+
