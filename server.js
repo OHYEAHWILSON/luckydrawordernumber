@@ -62,7 +62,20 @@ app.post('/check-order-number', async (req, res) => {
       return res.status(403).json({ success: false, message: 'You have already used your chance.' });
     }
 
-    return res.json({ success: true, message: 'Order number is valid. Proceed with the draw.' });
+    // Generate a draw number (you can customize the logic for this)
+    const drawNumber = Math.floor(Math.random() * 100); // Example random draw number
+
+    // Update the document with the draw number and mark it as played
+    await db.collection('orderNumbers').doc(trimmedOrderNumber).update({
+      hasPlayed: true, // Mark as played
+      drawNumber: drawNumber, // Store the draw number
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    return res.json({
+      success: true,
+      message: `Order number is valid. Your draw number is ${drawNumber}. Proceed with the draw.`,
+    });
   } catch (error) {
     console.error('Error checking order number:', error.stack);
     res.status(500).json({ success: false, message: 'Internal server error. Please try again later.' });
@@ -81,11 +94,12 @@ app.post('/add-order-number', async (req, res) => {
 
     const trimmedOrderNumber = orderNumber.trim();
 
-    // Add a new document with the order number as the ID
+    // Add a new document with the order number as the ID and set the drawNumber field to null initially
     const docRef = db.collection('orderNumbers').doc(trimmedOrderNumber);
     await docRef.set({
       orderNumber: trimmedOrderNumber, // Explicitly include the order number as a field
       hasPlayed: false, // Default status
+      drawNumber: null, // Initial draw number is null
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
     });
 
