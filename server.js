@@ -99,6 +99,31 @@ app.get('/export-order-numbers', async (req, res) => {
   }
 });
 
+// Route to retrieve order numbers from Firestore
+app.get('/get-order-numbers', async (req, res) => {
+  try {
+    // Fetch all documents in the 'orderNumbers' collection
+    const snapshot = await db.collection('orderNumbers').get();
+
+    if (snapshot.empty) {
+      return res.status(404).json({ success: false, message: 'No order numbers found.' });
+    }
+
+    // Map the data to a format suitable for export
+    const orderNumbers = snapshot.docs.map(doc => ({
+      orderNumber: doc.id, // Use the document ID as the order number
+      ...doc.data(), // Include all the fields (e.g., hasPlayed, timestamp)
+    }));
+
+    // Send the data in the response
+    res.json({ success: true, data: orderNumbers });
+  } catch (error) {
+    console.error('Error fetching order numbers:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
 // Wake-up ping route to prevent server from sleeping
 app.get('/keep-alive', (req, res) => {
   console.log('Received a keep-alive ping');
