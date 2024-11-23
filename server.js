@@ -141,6 +141,28 @@ app.get('/export-order-numbers', async (req, res) => {
   }
 });
 
+// Route to get order numbers
+app.get('/get-order-numbers', async (req, res) => {
+  try {
+    const snapshot = await db.collection('orderNumbers').get();
+    const orderNumbers = [];
+
+    snapshot.forEach((doc) => {
+      orderNumbers.push(doc.data());
+    });
+
+    if (orderNumbers.length === 0) {
+      return res.status(404).json({ success: false, message: 'No order numbers found.' });
+    }
+
+    res.json({ success: true, data: orderNumbers });
+  } catch (error) {
+    console.error('Error fetching order numbers:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
 // Wake-up ping route to prevent server from sleeping
 app.get('/keep-alive', (req, res) => {
   console.log('Received a keep-alive ping');
