@@ -30,31 +30,41 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Route to add an order number
-app.post('/add-order-number', async (req, res) => {
+// Step 1: Check if order number exists in Firestore and its status
+app.post('/check-order-number', async (req, res) => {
   try {
     const { orderNumber } = req.body;
     if (!orderNumber) {
       return res.status(400).json({ success: false, error: 'Order number is required.' });
     }
 
-    const docRef = db.collection('orderNumbers').doc(orderNumber);
-    const docSnapshot = await docRef.get();
+    // Query Firestore using 'orderNumber' as a field
+    const querySnapshot = await db.collection('orderNumbers').where('orderNumber', '==', orderNumber).get();
 
-    if (docSnapshot.exists) {
-      // If the order number already exists, return a message
-      return res.status(400).json({ success: false, message: 'Order number already existed.' });
+    if (querySnapshot.empty) {
+      // Add the order number if it doesn't exist
+      const docRef = db.collection('orderNumbers').doc(orderNumber);
+      await docRef.set({
+        orderNumber, // Explicitly include the order number as a field
+        hasPlayed: false, // Default status
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      return res.json({ success: true, message: 'Order number is valid. Proceed with the draw.' });
     }
 
-    // Add the new order number to the database
-    await docRef.set({
-      hasPlayed: false, // Default status
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    // Retrieve the first matching document
+    const docSnapshot = querySnapshot.docs[0];
+    const orderData = docSnapshot.data();
 
-    res.json({ success: true, message: 'Order number successfully recorded.' });
+    // Check if the order number has already been used
+    if (orderData.hasPlayed) {
+      return res.status(400).json({ success: false, message: 'You have used your chance.' });
+    }
+
+    return res.json({ success: true, message: 'Order number is valid. Proceed with the draw.' });
   } catch (error) {
-    console.error('Error adding order number:', error);
+    console.error('Error checking order number:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
