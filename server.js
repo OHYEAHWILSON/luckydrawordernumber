@@ -63,6 +63,36 @@ app.post('/check-order-number', async (req, res) => {
   }
 });
 
+// Route to add a new order number (added this route)
+app.post('/add-order-number', async (req, res) => {
+  try {
+    const { orderNumber } = req.body; // Get the order number from the request body
+
+    if (!orderNumber) {
+      return res.status(400).json({ success: false, message: 'Order number is required.' });
+    }
+
+    // Check if the order number already exists in Firestore
+    const docRef = db.collection('orderNumbers').doc(orderNumber);
+    const docSnapshot = await docRef.get();
+
+    if (docSnapshot.exists) {
+      return res.status(400).json({ success: false, message: 'Order number already exists.' });
+    }
+
+    // If it doesn't exist, add it to Firestore
+    await docRef.set({
+      hasPlayed: false, // Set initial status
+      timestamp: admin.firestore.FieldValue.serverTimestamp(), // Add timestamp
+    });
+
+    res.json({ success: true, message: 'Order number added successfully.' });
+  } catch (error) {
+    console.error('Error adding order number:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Set up the port for the server to listen on
 const PORT = process.env.PORT || 5015; // Ensure using dynamic port assignment
 app.listen(PORT, () => {
@@ -99,34 +129,8 @@ app.get('/export-order-numbers', async (req, res) => {
   }
 });
 
-// Route to retrieve order numbers from Firestore
-app.get('/get-order-numbers', async (req, res) => {
-  try {
-    // Fetch all documents in the 'orderNumbers' collection
-    const snapshot = await db.collection('orderNumbers').get();
-
-    if (snapshot.empty) {
-      return res.status(404).json({ success: false, message: 'No order numbers found.' });
-    }
-
-    // Map the data to a format suitable for export
-    const orderNumbers = snapshot.docs.map(doc => ({
-      orderNumber: doc.id, // Use the document ID as the order number
-      ...doc.data(), // Include all the fields (e.g., hasPlayed, timestamp)
-    }));
-
-    // Send the data in the response
-    res.json({ success: true, data: orderNumbers });
-  } catch (error) {
-    console.error('Error fetching order numbers:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-
 // Wake-up ping route to prevent server from sleeping
 app.get('/keep-alive', (req, res) => {
   console.log('Received a keep-alive ping');
   res.send('Server is alive');
 });
-
