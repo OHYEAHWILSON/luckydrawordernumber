@@ -24,7 +24,6 @@ admin.initializeApp({
 });
 
 const db = admin.firestore();
-
 const app = express();
 
 // Middleware to handle JSON requests
@@ -34,7 +33,7 @@ app.use(cors());
 // Route to check and validate the order number
 app.post('/check-order-number', async (req, res) => {
   try {
-    const { orderNumber } = req.body; // Only receive the order number
+    const { orderNumber } = req.body;
 
     if (!orderNumber) {
       return res.status(400).json({ success: false, message: 'Order number is required.' });
@@ -63,30 +62,43 @@ app.post('/check-order-number', async (req, res) => {
   }
 });
 
-// Route to add a new order number (added this route)
+// Route to add an order number
 app.post('/add-order-number', async (req, res) => {
   try {
-    const { orderNumber } = req.body; // Get the order number from the request body
-
+    const { orderNumber } = req.body;
     if (!orderNumber) {
-      return res.status(400).json({ success: false, message: 'Order number is required.' });
+      return res.status(400).json({ success: false, error: 'Order number is required.' });
     }
 
-    // Check if the order number already exists in Firestore
     const docRef = db.collection('orderNumbers').doc(orderNumber);
     const docSnapshot = await docRef.get();
 
     if (docSnapshot.exists) {
+      // If the order number already exists, return a message
       return res.status(400).json({ success: false, message: 'Order number already exists.' });
     }
 
-    // If it doesn't exist, add it to Firestore
+    // Add the new order number to the database
+    const timestamp = admin.firestore.FieldValue.serverTimestamp(); // Get server timestamp
     await docRef.set({
-      hasPlayed: false, // Set initial status
-      timestamp: admin.firestore.FieldValue.serverTimestamp(), // Add timestamp
+      orderNumber: orderNumber, // Explicitly store the order number
+      hasPlayed: false, // Default status
+      timestamp: timestamp, // Server timestamp
     });
 
-    res.json({ success: true, message: 'Order number added successfully.' });
+    // Log document data after it is saved
+    const savedDoc = await docRef.get();
+    console.log('Saved document data:', savedDoc.data());
+
+    // Send the response including the order number and Firestore timestamp
+    res.json({
+      success: true,
+      message: 'Order number successfully recorded.',
+      orderNumber: savedDoc.data().orderNumber, // Explicitly return the order number from Firestore
+      hasPlayed: savedDoc.data().hasPlayed,
+      timestamp: savedDoc.data().timestamp.toDate().toISOString(), // Convert to ISO format
+    });
+
   } catch (error) {
     console.error('Error adding order number:', error);
     res.status(500).json({ success: false, error: error.message });
@@ -94,7 +106,7 @@ app.post('/add-order-number', async (req, res) => {
 });
 
 // Set up the port for the server to listen on
-const PORT = process.env.PORT || 5015; // Ensure using dynamic port assignment
+const PORT = process.env.PORT || 5015;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
