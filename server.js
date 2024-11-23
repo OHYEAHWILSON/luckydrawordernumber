@@ -3,6 +3,7 @@ import admin from 'firebase-admin';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import { Parser } from 'json2csv'; // Import json2csv library
+import { DateTime } from 'luxon'; // Import Luxon for timezone handling
 
 // Load environment variables
 dotenv.config();
@@ -47,10 +48,11 @@ app.post('/check-order-number', async (req, res) => {
       return res.status(400).json({ success: false, message: 'This order number has already been used. Please contact support.' });
     }
 
-    // Add the new order number to the database
+    // Add the new order number to the database with Toronto time
+    const torontoTimestamp = DateTime.now().setZone('America/Toronto').toISO(); // Get Toronto time
     await docRef.set({
       hasPlayed: false, // Default status for first use
-      timestamp: admin.firestore.FieldValue.serverTimestamp(), // Save the timestamp
+      timestamp: torontoTimestamp, // Save the Toronto-adjusted timestamp
     });
 
     // Respond with a success message
@@ -78,25 +80,25 @@ app.post('/add-order-number', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Order number already exists.' });
     }
 
-    // Add the new order number to the database
-    const timestamp = admin.firestore.FieldValue.serverTimestamp(); // Get server timestamp
+    // Add the new order number to the database with Toronto time
+    const torontoTimestamp = DateTime.now().setZone('America/Toronto').toISO(); // Get Toronto time
     await docRef.set({
       orderNumber: orderNumber, // Explicitly store the order number
       hasPlayed: false, // Default status
-      timestamp: timestamp, // Server timestamp
+      timestamp: torontoTimestamp, // Save the Toronto-adjusted timestamp
     });
 
     // Log document data after it is saved
     const savedDoc = await docRef.get();
     console.log('Saved document data:', savedDoc.data());
 
-    // Send the response including the order number and Firestore timestamp
+    // Send the response including the order number and Toronto timestamp
     res.json({
       success: true,
       message: 'Order number successfully recorded.',
       orderNumber: savedDoc.data().orderNumber, // Explicitly return the order number from Firestore
       hasPlayed: savedDoc.data().hasPlayed,
-      timestamp: savedDoc.data().timestamp.toDate().toISOString(), // Convert to ISO format
+      timestamp: torontoTimestamp, // Use the Toronto time you set
     });
 
   } catch (error) {
@@ -161,7 +163,6 @@ app.get('/get-order-numbers', async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
-
 
 // Wake-up ping route to prevent server from sleeping
 app.get('/keep-alive', (req, res) => {
