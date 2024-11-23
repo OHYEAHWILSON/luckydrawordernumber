@@ -2,9 +2,8 @@ import express from 'express';
 import admin from 'firebase-admin';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import { readFileSync } from 'fs';
 
-// Load environment variables at the very beginning
+// Load environment variables
 dotenv.config();
 
 // Check for the FIREBASE_SERVICE_ACCOUNT_KEY environment variable
@@ -31,45 +30,8 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Test route for Firestore connection
-app.get('/test-firestore', async (req, res) => {
-  try {
-    const docRef = db.collection('testCollection').doc('testDoc');
-    await docRef.set({
-      message: 'Hello from Firestore!',
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    res.json({ success: true, message: 'Firestore is connected!' });
-  } catch (error) {
-    console.error('Error testing Firestore:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Route to add order numbers to Firestore
+// Route to add an order number
 app.post('/add-order-number', async (req, res) => {
-  try {
-    const { orderNumber } = req.body;
-    if (!orderNumber) {
-      return res.status(400).json({ success: false, error: 'Order number is required.' });
-    }
-
-    const docRef = db.collection('orderNumbers').doc(orderNumber);
-    await docRef.set({
-      orderNumber,
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    res.json({ success: true, message: 'Order number added successfully.' });
-  } catch (error) {
-    console.error('Error adding order number:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Step 2: Customer checks if order number is used
-app.post('/check-order-number', async (req, res) => {
   try {
     const { orderNumber } = req.body;
     if (!orderNumber) {
@@ -80,57 +42,25 @@ app.post('/check-order-number', async (req, res) => {
     const docSnapshot = await docRef.get();
 
     if (docSnapshot.exists) {
-      return res.status(400).json({ success: false, message: 'This order number has already been used.' });
-    } else {
-      return res.json({ success: true, message: 'Order number is valid. Proceed with the draw.' });
-    }
-  } catch (error) {
-    console.error('Error checking order number:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Step 4: Record draw result
-app.post('/record-draw-result', async (req, res) => {
-  try {
-    const { orderNumber, drawResult } = req.body;
-    if (!orderNumber || !drawResult) {
-      return res.status(400).json({ success: false, error: 'Order number and draw result are required.' });
+      // If the order number already exists, return a message
+      return res.status(400).json({ success: false, message: 'Order number already existed.' });
     }
 
-    const docRef = db.collection('drawResults').doc(orderNumber);
+    // Add the new order number to the database
     await docRef.set({
-      orderNumber,
-      drawResult,
+      hasPlayed: false, // Default status
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    res.json({ success: true, message: 'Draw result recorded successfully.' });
+    res.json({ success: true, message: 'Order number successfully recorded.' });
   } catch (error) {
-    console.error('Error recording draw result:', error);
+    console.error('Error adding order number:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
 // Set up the port for the server to listen on
-const PORT = process.env.PORT || 5015;  // Ensure using dynamic port assignment
+const PORT = process.env.PORT || 5015; // Ensure using dynamic port assignment
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
-});
-
-// Fetch order numbers
-app.get('/get-order-numbers', async (req, res) => {
-  try {
-    const querySnapshot = await db.collection('orderNumbers').get();
-    const results = [];
-
-    querySnapshot.forEach(doc => {
-      results.push(doc.data()); // Push each document's data to the results array
-    });
-
-    res.json({ success: true, data: results });
-  } catch (error) {
-    console.error('Error fetching order numbers:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
 });
