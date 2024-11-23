@@ -2,6 +2,7 @@ import express from 'express';
 import admin from 'firebase-admin';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import { Parser } from 'json2csv'; // Import json2csv library
 
 // Load environment variables
 dotenv.config();
@@ -66,4 +67,34 @@ app.post('/check-order-number', async (req, res) => {
 const PORT = process.env.PORT || 5015; // Ensure using dynamic port assignment
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
+});
+
+// Route to export order numbers as CSV
+app.get('/export-order-numbers', async (req, res) => {
+  try {
+    // Fetch all documents from the 'orderNumbers' collection
+    const snapshot = await db.collection('orderNumbers').get();
+    const orderNumbers = [];
+
+    snapshot.forEach((doc) => {
+      orderNumbers.push(doc.data()); // Push each document's data to the array
+    });
+
+    // If no order numbers are found, send a 404 response
+    if (orderNumbers.length === 0) {
+      return res.status(404).send('No order numbers found.');
+    }
+
+    // Convert the JSON data to CSV format using json2csv
+    const csvParser = new Parser();
+    const csvData = csvParser.parse(orderNumbers);
+
+    // Set the response headers to indicate a CSV file download
+    res.header('Content-Type', 'text/csv');
+    res.attachment('orderNumbers.csv');
+    res.send(csvData); // Send the CSV data as the response
+  } catch (error) {
+    console.error('Error exporting data to CSV:', error);
+    res.status(500).send('Error exporting data to CSV.');
+  }
 });

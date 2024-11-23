@@ -1,7 +1,8 @@
-import express from 'express';      // Import express
-import admin from 'firebase-admin';  // Import firebase-admin
-import dotenv from 'dotenv';        // Import dotenv for environment variables
-import cors from 'cors';            // Import cors for cross-origin resource sharing
+import express from 'express';
+import admin from 'firebase-admin';
+import dotenv from 'dotenv';
+import cors from 'cors';
+import { Parser } from 'json2csv'; // Import json2csv library
 
 // Load environment variables
 dotenv.config();
@@ -24,52 +25,76 @@ admin.initializeApp({
 
 const db = admin.firestore();
 
-// Initialize the Express application
 const app = express();
 
 // Middleware to handle JSON requests
 app.use(express.json());
 app.use(cors());
 
-// Route to add an order number
-app.post('/add-order-number', async (req, res) => {
+// Route to check and validate the order number
+app.post('/check-order-number', async (req, res) => {
   try {
-    const { orderNumber } = req.body;
+    const { orderNumber } = req.body; // Only receive the order number
+
     if (!orderNumber) {
-      return res.status(400).json({ success: false, error: 'Order number is required.' });
+      return res.status(400).json({ success: false, message: 'Order number is required.' });
     }
 
     const docRef = db.collection('orderNumbers').doc(orderNumber);
     const docSnapshot = await docRef.get();
 
     if (docSnapshot.exists) {
-      // If the order number already exists, return a message
-      return res.status(400).json({ success: false, message: 'Order number already exists.' });
+      // If the order number already exists in the database, block further attempts
+      return res.status(400).json({ success: false, message: 'This order number has already been used. Please contact support.' });
     }
 
     // Add the new order number to the database
     await docRef.set({
-      orderNumber: orderNumber, // Explicitly store the order number
-      hasPlayed: false, // Default status
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      hasPlayed: false, // Default status for first use
+      timestamp: admin.firestore.FieldValue.serverTimestamp(), // Save the timestamp
     });
 
-    // Send the response including the order number
-    res.json({
-      success: true,
-      message: 'Order number successfully recorded.',
-      orderNumber: orderNumber, // Include the order number in the response
-      hasPlayed: false,
-      timestamp: new Date().toISOString(), // Optionally include the timestamp in ISO format
-    });
+    // Respond with a success message
+    res.json({ success: true, message: 'Order number successfully recorded. Proceed to the draw.' });
+
   } catch (error) {
-    console.error('Error adding order number:', error);
+    console.error('Error checking order number:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
 // Set up the port for the server to listen on
-const PORT = process.env.PORT || 5015;
+const PORT = process.env.PORT || 5015; // Ensure using dynamic port assignment
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
+});
+
+// Route to export order numbers as CSV
+app.get('/export-order-numbers', async (req, res) => {
+  try {
+    // Fetch all documents from the 'orderNumbers' collection
+    const snapshot = await db.collection('orderNumbers').get();
+    const orderNumbers = [];
+
+    snapshot.forEach((doc) => {
+      orderNumbers.push(doc.data()); // Push each document's data to the array
+    });
+
+    // If no order numbers are found, send a 404 response
+    if (orderNumbers.length === 0) {
+      return res.status(404).send('No order numbers found.');
+    }
+
+    // Convert the JSON data to CSV format using json2csv
+    const csvParser = new Parser();
+    const csvData = csvParser.parse(orderNumbers);
+
+    // Set the response headers to indicate a CSV file download
+    res.header('Content-Type', 'text/csv');
+    res.attachment('orderNumbers.csv');
+    res.send(csvData); // Send the CSV data as the response
+  } catch (error) {
+    console.error('Error exporting data to CSV:', error);
+    res.status(500).send('Error exporting data to CSV.');
+  }
 });
