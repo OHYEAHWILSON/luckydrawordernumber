@@ -34,12 +34,16 @@ app.use(cors());
 app.post('/check-order-number', async (req, res) => {
   try {
     const { orderNumber } = req.body;
-    if (!orderNumber) {
-      return res.status(400).json({ success: false, message: 'Order number is required.' });
+
+    // Ensure the order number is a string and trim any whitespace
+    if (!orderNumber || typeof orderNumber !== 'string') {
+      return res.status(400).json({ success: false, message: 'Order number is required and must be a valid string.' });
     }
 
+    const trimmedOrderNumber = orderNumber.trim();
+
     // Query Firestore using 'orderNumber' as a field
-    const querySnapshot = await db.collection('orderNumbers').where('orderNumber', '==', orderNumber).get();
+    const querySnapshot = await db.collection('orderNumbers').where('orderNumber', '==', trimmedOrderNumber).get();
 
     if (querySnapshot.empty) {
       // Return a 404 response if the order number doesn't exist
@@ -69,14 +73,18 @@ app.post('/check-order-number', async (req, res) => {
 app.post('/add-order-number', async (req, res) => {
   try {
     const { orderNumber } = req.body;
-    if (!orderNumber) {
-      return res.status(400).json({ success: false, message: 'Order number is required.' });
+
+    // Ensure the order number is a string and trim any whitespace
+    if (!orderNumber || typeof orderNumber !== 'string') {
+      return res.status(400).json({ success: false, message: 'Order number is required and must be a valid string.' });
     }
 
+    const trimmedOrderNumber = orderNumber.trim();
+
     // Add a new document with the order number as the ID
-    const docRef = db.collection('orderNumbers').doc(orderNumber);
+    const docRef = db.collection('orderNumbers').doc(trimmedOrderNumber);
     await docRef.set({
-      orderNumber, // Explicitly include the order number as a field
+      orderNumber: trimmedOrderNumber, // Explicitly include the order number as a field
       hasPlayed: false, // Default status
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
     });
