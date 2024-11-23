@@ -30,49 +30,36 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Step 1: Check if order number exists in Firestore and its status
+// Route to check and validate the order number
 app.post('/check-order-number', async (req, res) => {
   try {
-    const { orderNumber } = req.body;
+    const { orderNumber } = req.body; // Only receive the order number
+
     if (!orderNumber) {
-      return res.status(400).json({ success: false, error: 'Order number is required.' });
+      return res.status(400).json({ success: false, message: 'Order number is required.' });
     }
 
-    // Query Firestore using 'orderNumber' as a field
-    const querySnapshot = await db.collection('orderNumbers').where('orderNumber', '==', orderNumber).get();
+    const docRef = db.collection('orderNumbers').doc(orderNumber);
+    const docSnapshot = await docRef.get();
 
-    if (querySnapshot.empty) {
-      // Add the order number if it doesn't exist
-      const docRef = db.collection('orderNumbers').doc(orderNumber);
-      await docRef.set({
-        orderNumber, // Explicitly include the order number as a field
-        hasPlayed: false, // Default status
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      });
-
-      return res.json({ success: true, message: 'Order number is valid. Proceed with the draw.' });
+    if (docSnapshot.exists) {
+      // If the order number already exists in the database, block further attempts
+      return res.status(400).json({ success: false, message: 'This order number has already been used. Please contact support.' });
     }
 
-    // Retrieve the first matching document
-    const docSnapshot = querySnapshot.docs[0];
-    const orderData = docSnapshot.data();
+    // Add the new order number to the database
+    await docRef.set({
+      hasPlayed: false, // Default status for first use
+      timestamp: admin.firestore.FieldValue.serverTimestamp(), // Save the timestamp
+    });
 
-    // Check if the order number has already been used
-    if (orderData.hasPlayed) {
-      return res.status(400).json({ success: false, message: 'You have used your chance.' });
-    }
+    // Respond with a success message
+    res.json({ success: true, message: 'Order number successfully recorded. Proceed to the draw.' });
 
-    return res.json({ success: true, message: 'Order number is valid. Proceed with the draw.' });
   } catch (error) {
     console.error('Error checking order number:', error);
     res.status(500).json({ success: false, error: error.message });
   }
-});
-
-// Keep-Alive route to prevent server from sleeping
-app.get('/keep-alive', (req, res) => {
-  console.log('Received a keep-alive ping');
-  res.send('Server is alive');
 });
 
 // Set up the port for the server to listen on

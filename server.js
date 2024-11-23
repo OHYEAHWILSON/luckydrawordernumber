@@ -30,91 +30,36 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Check if order number exists and verify its status
+// Route to check and validate the order number
 app.post('/check-order-number', async (req, res) => {
   try {
-    const { orderNumber } = req.body;
+    const { orderNumber } = req.body; // Only receive the order number
 
-    // Ensure the order number is a string and trim any whitespace
-    if (!orderNumber || typeof orderNumber !== 'string') {
-      return res.status(400).json({ success: false, message: 'Order number is required and must be a valid string.' });
+    if (!orderNumber) {
+      return res.status(400).json({ success: false, message: 'Order number is required.' });
     }
 
-    const trimmedOrderNumber = orderNumber.trim();
+    const docRef = db.collection('orderNumbers').doc(orderNumber);
+    const docSnapshot = await docRef.get();
 
-    // Query Firestore using 'orderNumber' as a field
-    const querySnapshot = await db.collection('orderNumbers').where('orderNumber', '==', trimmedOrderNumber).get();
-
-    if (querySnapshot.empty) {
-      // Return a 404 response if the order number doesn't exist
-      return res.status(404).json({
-        success: false,
-        message: 'Invalid order number. Please check your input or contact support.',
-      });
+    if (docSnapshot.exists) {
+      // If the order number already exists in the database, block further attempts
+      return res.status(400).json({ success: false, message: 'This order number has already been used. Please contact support.' });
     }
 
-    // Retrieve the first matching document
-    const docSnapshot = querySnapshot.docs[0];
-    const orderData = docSnapshot.data();
-
-    // Check if the order number has already been used
-    if (orderData.hasPlayed) {
-      return res.status(403).json({ success: false, message: 'You have already used your chance.' });
-    }
-
-    // Generate a draw number (you can customize the logic for this)
-    const drawNumber = Math.floor(Math.random() * 100); // Example random draw number
-
-    // Update the document with the draw number and mark it as played
-    await db.collection('orderNumbers').doc(trimmedOrderNumber).update({
-      hasPlayed: true, // Mark as played
-      drawNumber: drawNumber, // Store the draw number
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    return res.json({
-      success: true,
-      message: `Order number is valid. Your draw number is ${drawNumber}. Proceed with the draw.`,
-    });
-  } catch (error) {
-    console.error('Error checking order number:', error.stack);
-    res.status(500).json({ success: false, message: 'Internal server error. Please try again later.' });
-  }
-});
-
-// Add a new order number (if required separately)
-app.post('/add-order-number', async (req, res) => {
-  try {
-    const { orderNumber } = req.body;
-
-    // Ensure the order number is a string and trim any whitespace
-    if (!orderNumber || typeof orderNumber !== 'string') {
-      return res.status(400).json({ success: false, message: 'Order number is required and must be a valid string.' });
-    }
-
-    const trimmedOrderNumber = orderNumber.trim();
-
-    // Add a new document with the order number as the ID and set the drawNumber field to null initially
-    const docRef = db.collection('orderNumbers').doc(trimmedOrderNumber);
+    // Add the new order number to the database
     await docRef.set({
-      orderNumber: trimmedOrderNumber, // Explicitly include the order number as a field
-      hasPlayed: false, // Default status
-      drawNumber: null, // Initial draw number is null
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      hasPlayed: false, // Default status for first use
+      timestamp: admin.firestore.FieldValue.serverTimestamp(), // Save the timestamp
     });
 
-    return res.status(201).json({ success: true, message: 'Order number successfully created.' });
-  } catch (error) {
-    console.error('Error adding order number:', error.stack);
-    res.status(500).json({ success: false, message: 'Internal server error. Please try again later.' });
-  }
-});
+    // Respond with a success message
+    res.json({ success: true, message: 'Order number successfully recorded. Proceed to the draw.' });
 
-// Keep-Alive route to prevent server from sleeping
-app.get('/keep-alive', (req, res) => {
-  console.log('Received a keep-alive ping');
-  res.set('X-Keep-Alive', 'true'); // Optional header for debugging
-  res.send('Server is alive');
+  } catch (error) {
+    console.error('Error checking order number:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 // Set up the port for the server to listen on
