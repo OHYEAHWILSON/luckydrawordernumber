@@ -34,10 +34,10 @@ app.use(cors());
 // Route to check and validate the order number
 app.post('/check-order-number', async (req, res) => {
   try {
-    const { orderNumber, customerEmail, salesEmail } = req.body;
+    const { orderNumber } = req.body;
 
-    if (!orderNumber || !customerEmail || !salesEmail) {
-      return res.status(400).json({ success: false, message: 'Order number, customer email, and sales email are required.' });
+    if (!orderNumber) {
+      return res.status(400).json({ success: false, message: 'Order number is required.' });
     }
 
     const docRef = db.collection('orderNumbers').doc(orderNumber);
@@ -48,12 +48,9 @@ app.post('/check-order-number', async (req, res) => {
       return res.status(400).json({ success: false, message: 'This order number has already been used. Please contact support.' });
     }
 
-    // Add the new order number to the database with Toronto time and email info
+    // Add the new order number to the database with Toronto time
     const torontoTimestamp = DateTime.now().setZone('America/Toronto').toISO(); // Get Toronto time
     await docRef.set({
-      orderNumber: orderNumber, // Explicitly store the order number
-      customerEmail: customerEmail, // Store the customer email
-      salesEmail: salesEmail, // Store the sales email
       hasPlayed: false, // Default status for first use
       timestamp: torontoTimestamp, // Save the Toronto-adjusted timestamp
     });
@@ -70,9 +67,9 @@ app.post('/check-order-number', async (req, res) => {
 // Route to add an order number
 app.post('/add-order-number', async (req, res) => {
   try {
-    const { orderNumber, customerEmail, salesEmail } = req.body;
-    if (!orderNumber || !customerEmail || !salesEmail) {
-      return res.status(400).json({ success: false, error: 'Order number, customer email, and sales email are required.' });
+    const { orderNumber } = req.body;
+    if (!orderNumber) {
+      return res.status(400).json({ success: false, error: 'Order number is required.' });
     }
 
     const docRef = db.collection('orderNumbers').doc(orderNumber);
@@ -83,12 +80,10 @@ app.post('/add-order-number', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Order number already exists.' });
     }
 
-    // Add the new order number to the database with Toronto time and email info
+    // Add the new order number to the database with Toronto time
     const torontoTimestamp = DateTime.now().setZone('America/Toronto').toISO(); // Get Toronto time
     await docRef.set({
       orderNumber: orderNumber, // Explicitly store the order number
-      customerEmail: customerEmail, // Store the customer email
-      salesEmail: salesEmail, // Store the sales email
       hasPlayed: false, // Default status
       timestamp: torontoTimestamp, // Save the Toronto-adjusted timestamp
     });
