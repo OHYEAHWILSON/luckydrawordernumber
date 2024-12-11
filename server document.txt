@@ -2,8 +2,8 @@ import express from 'express';
 import admin from 'firebase-admin';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import { Parser } from 'json2csv'; // Import json2csv library
-import { DateTime } from 'luxon'; // Import Luxon for timezone handling
+import { Parser } from 'json2csv';
+import { DateTime } from 'luxon';
 
 // Load environment variables
 dotenv.config();
