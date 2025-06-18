@@ -33,7 +33,10 @@ app.use(cors({
   origin: 'https://aibasetechnology.com',
   credentials: true
 }));
+<<<<<<< HEAD
 
+=======
+>>>>>>> b86cea3544ecf864c9e422c53ac8c8cb5590c1eb
 
 // Route to check and validate the order number
 app.post('/check-order-number', async (req, res) => {
